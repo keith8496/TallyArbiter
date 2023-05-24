@@ -1,4 +1,4 @@
-#define C_PLUS 0 //CHANGE TO 1 IF YOU USE THE M5STICK-C PLUS
+#define C_PLUS 1 //CHANGE TO 1 IF YOU USE THE M5STICK-C PLUS
 
 #if C_PLUS == 1
 #include <M5StickCPlus.h>
@@ -11,8 +11,6 @@
 #include <Arduino_JSON.h>
 #include <PinButton.h>
 #include <WiFiManager.h>
-#include <ArduinoOTA.h>
-#include <ESPmDNS.h>
 #include <Preferences.h>
 #include "Free_Fonts.h"
 
@@ -76,6 +74,7 @@ WiFiManager wm; // global wm instance
 bool portalRunning = false;
 
 void setup() {
+  
   pinMode(TRIGGER_PIN, INPUT_PULLUP);
   Serial.begin(115200);
   while (!Serial);
@@ -131,36 +130,6 @@ void setup() {
     delay(200);
   }
 
-  ArduinoOTA.setHostname(listenerDeviceName.c_str());
-  ArduinoOTA.setPassword("tallyarbiter");
-  ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) logger("Auth Failed", "error");
-      else if (error == OTA_BEGIN_ERROR) logger("Begin Failed", "error");
-      else if (error == OTA_CONNECT_ERROR) logger("Connect Failed", "error");
-      else if (error == OTA_RECEIVE_ERROR) logger("Receive Failed", "error");
-      else if (error == OTA_END_ERROR) logger("End Failed", "error");
-    });
-
-  ArduinoOTA.begin();
-
   #if TALLY_EXTRA_OUTPUT
   // Enable interal led for program trigger
   pinMode(led_program, OUTPUT);
@@ -175,12 +144,12 @@ void setup() {
 }
 
 void loop() {
+  
   if(portalRunning){
     wm.process();
   }
   
   checkReset(); //check for reset pin
-  ArduinoOTA.handle();
   socket.loop();
   btnM5.update();
   btnAction.update();
@@ -204,6 +173,7 @@ void loop() {
 }
 
 void showSettings() {
+  
   wm.startWebPortal();
   portalRunning = true;
   
@@ -300,34 +270,6 @@ void connectToNetwork() {
     //if you get here you have connected to the WiFi
     logger("connected...yay :)", "info");
     networkConnected = true;
-
-    //TODO: fix MDNS discovery
-    /*
-    int nrOfServices = MDNS.queryService("tally-arbiter", "tcp");
-
-    if (nrOfServices == 0) {
-      logger("No server found.", "error");
-    } else {
-      logger("Number of servers found: ", "info");
-      Serial.print(nrOfServices);
-     
-      for (int i = 0; i < nrOfServices; i=i+1) {
- 
-        Serial.println("---------------");
-       
-        Serial.print("Hostname: ");
-        Serial.println(MDNS.hostname(i));
- 
-        Serial.print("IP address: ");
-        Serial.println(MDNS.IP(i));
- 
-        Serial.print("Port: ");
-        Serial.println(MDNS.port(i));
- 
-        Serial.println("---------------");
-      }
-    }
-    */
   }
 }
 
