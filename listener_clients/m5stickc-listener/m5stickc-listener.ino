@@ -2,8 +2,9 @@
 #include "TallyArbiter.h"
 #include "CustomWifi.h"
 #include "Screens.h"
-#include <PinButton.h>
-#include <millisDelay.h>
+#include "PinButton.h"
+#include "millisDelay.h"
+#include <HTTPClient.h>
 
 #define TRIGGER_PIN 0   //reset pin 
 
@@ -13,6 +14,7 @@ PinButton btnAction(39);  //the "Action" button on the device
 uint8_t wasPressed();
 
 millisDelay oneSecDelay;
+millisDelay oneMinDelay;
 
 int currentBrightness = 9;
 int maxBrightness = 12;
@@ -31,7 +33,6 @@ const int batPercentage_C = 60;
 int batPercentage_I = 0;
 float batPercentage_M = 0;
 float batPercentage_A [batPercentage_C];
-
 
 // Start Setup
 void setup() {
@@ -57,7 +58,6 @@ void setup() {
   M5.Lcd.setCursor(0, 20);
   M5.Lcd.fillScreen(TFT_BLACK);
   M5.Lcd.setFreeFont(FSS9);
-  //M5.Lcd.setTextSize(2);
   M5.Lcd.setTextColor(WHITE, BLACK);
   M5.Lcd.println("booting...");
   logger("Tally Arbiter M5StickC+ Listener Client booting.", "info");
@@ -111,6 +111,7 @@ void setup() {
   #endif
 
   oneSecDelay.start(1000);  // start delay
+  oneMinDelay.start(60000);
   connectToServer();
 
   delay(3000);
@@ -160,6 +161,14 @@ void loop() {
     if (currentScreen == 2) {
       showPowerInfo();
     }
+  }
+
+  if (oneMinDelay.justFinished()) {
+    HTTPClient http;
+    http.begin("http://192.168.13.53:8000/set/custom-variable/tally_"+DeviceName+"_batPercentage?value="+String(batPercentage,1));
+    http.GET();
+    http.end();
+    oneMinDelay.repeat();
   }
 
   if (btnAction.isClick()) {
@@ -247,7 +256,12 @@ void doPowerManagement() {
       }
     }
   }
-  
+
+  // Send batPercentage to TA
+  //char messageOut[32];
+  //String(batPercentage,1).toCharArray(messageOut, 32);
+  //String("Hello World").toCharArray(messageOut,32);
+  //ws_emit("messaging", messageOut);
 
   batCurrent = M5.Axp.GetBatCurrent();
   batChargeCurrent = M5.Axp.GetBatChargeCurrent();
@@ -312,5 +326,3 @@ void doPowerManagement() {
   }
 
 }
-
-

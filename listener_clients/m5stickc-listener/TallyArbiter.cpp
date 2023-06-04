@@ -2,6 +2,7 @@
 #include "TallyArbiter.h"
 #include "Screens.h"
 #include <Arduino_JSON.h>
+#include "millisDelay.h"
 
 #define maxTextSize 5   //larger sourceName text
 
@@ -12,7 +13,7 @@ const int led_preview = 26; //OPTIONAL Led for preview on pin G26
 const int led_aux = 36;     //OPTIONAL Led for aux on pin G36
 #endif
 
-bool LAST_MSG = false; // true = show log on tally screen<
+bool LAST_MSG = true; // true = show log on tally screen<
 char tallyarbiter_host[40] = "192.168.13.52"; //IP address of the Tally Arbiter Server
 char tallyarbiter_port[6] = "4455";
 
@@ -33,6 +34,7 @@ JSONVar DeviceStates;
 String DeviceId = "unassigned";
 String DeviceName = "Unassigned";
 String LastMessage = "";
+millisDelay LastMessageDelay;
 
 
 void ws_emit(String event, const char *payload = NULL) {
@@ -71,9 +73,15 @@ String strip_quot(String str) {
 
 void evaluateMode() {
   if(actualType != prevType) {
-    M5.Lcd.setCursor(4, 82);
-    M5.Lcd.setFreeFont(FSS24);
-    //M5.Lcd.setTextSize(maxTextSize);
+    
+    if (!LastMessageDelay.isRunning()) {
+      M5.Lcd.setCursor(4, 82);
+      M5.Lcd.setFreeFont(FSS24);
+    } else {
+      M5.Lcd.setCursor(80, 20);
+      M5.Lcd.setFreeFont(FSSB9);
+    }
+    
     actualColor.replace("#", "");
     String hexstring = actualColor;
     long number = (long) strtol( &hexstring[1], NULL, 16);
@@ -116,9 +124,13 @@ void evaluateMode() {
     prevType = actualType;
   }
 
-  M5.Lcd.printf("%.3f%% bat", batPercentage);
-  
-  if (LAST_MSG == true){
+  M5.Lcd.setFreeFont(FSS9);
+  //M5.Lcd.setCursor(150, 130);
+  //M5.Lcd.printf("Bat: %.1f%%", batPercentage);
+
+  if (LastMessage != ""){
+    M5.Lcd.setCursor(10, 40);
+    M5.Lcd.setTextWrap(true);
     M5.Lcd.println(LastMessage);
   }
 }
@@ -191,6 +203,9 @@ void socket_Flash() {
     case 1:
       showSettings();
       break;
+    case 2:
+      showPowerInfo();
+      break;
   }
 }
 
@@ -203,8 +218,18 @@ void socket_Messaging(String payload) {
   int messageQuoteIndex = strPayload.lastIndexOf(',');
   String message = strPayload.substring(messageQuoteIndex + 1);
   message.replace("\"", "");
-  LastMessage = messageType + ": " + message;
-  evaluateMode();
+  if (messageType == "producer") {
+    LastMessage = message;
+    if (LastMessageDelay.isRunning()) {
+      LastMessageDelay.restart();
+    } else {
+      LastMessageDelay.start(60000);
+    }
+    actualType = "socket_Messaging";
+    evaluateMode();
+  } else {
+    return;
+  }
 }
 
 
@@ -312,6 +337,11 @@ void socket_event(socketIOmessageType_t type, uint8_t * payload, size_t length) 
     default:
       break;
   }
+
+  if (LastMessageDelay.justFinished()) {
+    LastMessage = "";
+  }
+
 }
 
 

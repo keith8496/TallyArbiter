@@ -12,5 +12,6 @@ extern SocketIOclient socket;
 extern String DeviceId;
 extern String DeviceName;
 
+void ws_emit(String event, const char *payload);
 void connectToServer();
 void evaluateMode();
