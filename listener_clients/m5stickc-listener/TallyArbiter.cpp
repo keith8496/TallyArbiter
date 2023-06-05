@@ -2,7 +2,7 @@
 #include "TallyArbiter.h"
 #include "Screens.h"
 #include <Arduino_JSON.h>
-#include "millisDelay.h"
+#include <millisDelay.h>
 
 #define maxTextSize 5   //larger sourceName text
 

@@ -2,9 +2,8 @@
 #include "TallyArbiter.h"
 #include "CustomWifi.h"
 #include "Screens.h"
-#include "PinButton.h"
-#include "millisDelay.h"
-#include <HTTPClient.h>
+#include <PinButton.h>
+#include <millisDelay.h>
 
 #define TRIGGER_PIN 0   //reset pin 
 
@@ -14,7 +13,6 @@ PinButton btnAction(39);  //the "Action" button on the device
 uint8_t wasPressed();
 
 millisDelay oneSecDelay;
-millisDelay oneMinDelay;
 
 int currentBrightness = 9;
 int maxBrightness = 12;
@@ -111,7 +109,6 @@ void setup() {
   #endif
 
   oneSecDelay.start(1000);  // start delay
-  oneMinDelay.start(60000);
   connectToServer();
 
   delay(3000);
@@ -161,14 +158,6 @@ void loop() {
     if (currentScreen == 2) {
       showPowerInfo();
     }
-  }
-
-  if (oneMinDelay.justFinished()) {
-    HTTPClient http;
-    http.begin("http://192.168.13.53:8000/set/custom-variable/tally_"+DeviceName+"_batPercentage?value="+String(batPercentage,1));
-    http.GET();
-    http.end();
-    oneMinDelay.repeat();
   }
 
   if (btnAction.isClick()) {
